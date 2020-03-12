@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Xml.Serialization;
 
 namespace cw2
@@ -9,44 +11,37 @@ namespace cw2
     {
         public static void Main(string[] args)
         {
-            var path = @"C:\Users\s18838\Desktop\dane.csv";
+            
+            if (args.Length < 3)
+            {
+                throw new ArgumentNullException();
+            }
 
-            var lines = File.ReadLines(path);
+            FileStream log = new FileStream( @"log.txt", FileMode.OpenOrCreate);
+            
+            var pathFrom = args[0];
+            var pathTo = args[1];
+            var type = args[2];
+
+            var lines = File.ReadLines(pathFrom);
 
             var students = new HashSet<Student>(new StudentComparer());
             var studies = new HashSet<Study>();
 
             foreach (var line in lines)
             {
-
                 try
                 {
-
                     var array = line.Split(",");
 
-                    if (array.Length < 9) throw new NotRightData(); ;
+                    if (array.Length < 9) throw new NotRightData(line); ;
 
                     foreach (var value in array)
                     {
-                        if (value.Length == 0) throw new NotFullData();
+                        if (value.Length == 0) throw new NotFullData(line);
                     }
 
                     var study = new Study { Name = array[2] };
-
-                    bool b = true;
-                    foreach (var s in studies)
-                    {
-                        if (s.Equals(study))
-                        {
-                            s.CountOfStudents++;
-                            b = false;
-                        }
-                    }
-
-                    if (b)
-                    {
-                        studies.Add(new Study { Name = array[2], CountOfStudents = 1 });
-                    }
 
                     var student = new Student
                     {
@@ -60,23 +55,36 @@ namespace cw2
                         FathersName = array[8]
                     };
 
-                    if (students.Contains(student)) throw new DuplicateData();
+                    if (students.Contains(student)) throw new DuplicateData(line);
 
                     students.Add(student);
+
+                    bool exist = false;
+                    
+                    foreach (var s in studies)
+                    {
+                        if (s.Equals(study))
+                        {
+                            exist = true;
+                            s.CountOfStudents++;
+                            break;
+                        }
+                    }
+
+                    if (!exist)
+                    {
+                        studies.Add(new Study { Name = array[2], CountOfStudents = 1 });
+                    }
 
                 }
                 catch (Exception e)
                 {
-
+                    Byte[] info = new UTF8Encoding(true).GetBytes(e.Message + "\n");
+                    log.Write(info, 0, info.Length);
                 }
 
             }
-
-            FileStream writer = new FileStream(@"data.xml", FileMode.Create);
-
-
-            XmlSerializer serializer = new XmlSerializer(typeof(University));
-
+            
             var listStudents = new List<Student>();
 
             foreach (var student in students)
@@ -97,23 +105,55 @@ namespace cw2
                 ActiveStudies = listStudies
             };
 
-            serializer.Serialize(writer, university);
-
+            if (type.Equals("xml"))
+            {
+                FileStream writer = new FileStream(pathTo, FileMode.Create);
+                XmlSerializer serializer = new XmlSerializer(typeof(University));
+                serializer.Serialize(writer, university);
+            }
+            else if (type.Equals("json"))
+            {
+                var jsonString = JsonSerializer.Serialize(university); 
+                File.WriteAllText(pathTo, jsonString);
+            }
         }
     }
 
-    class NotFullData : Exception { }
-    class NotRightData : Exception { }
-    class DuplicateData : Exception { }
+    class NotFullData : Exception
+    {
+        public NotFullData(string message) : base("NotFullData: " + message) { }
+    }
+
+    class NotRightData : Exception
+    {
+        public NotRightData(string message) : base("NotRightData: " + message) { }
+    }
+
+    class DuplicateData : Exception
+    {
+        public DuplicateData(string message) : base("DuplicateData: " + message) { }
+    }
 
     class StudentComparer : IEqualityComparer<Student>
     {
         public bool Equals(Student x, Student y)
         {
-            if (x.Index != y.Index) return false;
-            if (!x.Name.Equals(y.Name)) return false;
-            if (!x.Surname.Equals(y.Surname)) return false;
-            return true;
+            if (x == null || y == null)
+            {
+                return false;
+            }
+
+            if (x.Index != y.Index)
+            {
+                return false;
+            }
+
+            if (!x.Name.Equals(y.Name))
+            {
+                return false;
+            }
+            
+            return x.Surname.Equals(y.Surname);
         }
 
         public int GetHashCode(Student obj)
@@ -156,9 +196,9 @@ namespace cw2
             return this.Name == ((Study)obj).Name;
         }
 
-        public int GetHashCode(Student obj)
+        public override int GetHashCode()
         {
-            return obj.Name.GetHashCode();
+            return Name.GetHashCode();
         }
     }
 
