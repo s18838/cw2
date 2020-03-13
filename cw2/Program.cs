@@ -49,7 +49,7 @@ namespace cw2
                         Surname = array[1],
                         Lecture = new Lecture { Name = array[2], Type = array[3] },
                         Index = int.Parse(array[4]),
-                        Birthday = DateTime.Parse(array[5]),
+                        Birthday = DateTime.Parse(array[5]).ToString("dd.MM.yyyy"),
                         Email = array[6],
                         MothersName = array[7],
                         FathersName = array[8]
@@ -100,7 +100,7 @@ namespace cw2
             }
 
             var university = new University { Author = "Taras Kulyavtes",
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.Now.ToString("dd.MM.yyyy"),
                 Students = listStudents,
                 ActiveStudies = listStudies
             };
@@ -169,7 +169,7 @@ namespace cw2
         public string MothersName { get; set; }
         public string FathersName { get; set; }
         public int Index { get; set; }
-        public DateTime Birthday { get; set; }
+        public string Birthday { get; set; }
         public Lecture Lecture { get; set; }
     }
 
@@ -203,7 +203,7 @@ namespace cw2
     }
 
     public class University {
-        public DateTime CreatedAt { get; set; }
+        public string CreatedAt { get; set; }
         public string Author { get; set; }
         public List<Student> Students { get; set; }
         public List<Study> ActiveStudies { get; set; }
